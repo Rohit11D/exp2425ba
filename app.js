@@ -16,25 +16,24 @@ app.use(express.json());
 // });
 app.use(
   cors({
-    origin: "https://r54jf6-3000.csb.app/", // Adjust this to match your frontend URL
-    credentials: true,
+    origin: "https://r54jf6-3000.csb.app", // Adjust this to match your frontend URL
   })
 );
 
 connectDB();
 
 // Serve frontend (for production)
-// if (process.env.NODE_ENV === 'production') {
-//     app.use(express.static(path.join(__dirname, 'frontend/build')));
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "frontend/build")));
 
-//     app.get('*', (req, res) =>
-//         res.sendFile(path.resolve(__dirname, 'frontend', 'build', 'index.html'))
-//     );
-// } else {
-//     app.get('/', (req, res) => {
-//         res.send('API is running...');
-//     });
-// }
+  app.get("*", (req, res) =>
+    res.sendFile(path.resolve(__dirname, "frontend", "build", "index.html"))
+  );
+} else {
+  app.get("/", (req, res) => {
+    res.send("API is running...");
+  });
+}
 
 //  Creating end point for registering the user
 app.post("/register", async (req, res) => {
@@ -43,11 +42,9 @@ app.post("/register", async (req, res) => {
 
   // Check for missing fields
   if (!name || !email || !password || !role) {
-    return res
-      .status(400)
-      .json({
-        message: "All fields are required: name, email, password, and role",
-      });
+    return res.status(400).json({
+      message: "All fields are required: name, email, password, and role",
+    });
   }
   let check = await userSchema.findOne({ email: req.body.email });
   if (check) {

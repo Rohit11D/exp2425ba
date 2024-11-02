@@ -70,6 +70,27 @@ app.post("/register", async (req, res) => {
   res.json({ success: true, token });
 });
 
+// Login user route
+app.post("/login", async (req, res) => {
+  let user = await userSchema.findOne({ email: req.body.email });
+  if (user) {
+    const passCompare = req.body.password === user.password;
+    if (passCompare) {
+      const data = {
+        user: {
+          id: user.id,
+        },
+      };
+      const token = jwt.sign(data, "secret_ecom");
+      res.json({ success: true, token, user });
+    } else {
+      res.json({ success: false, errors: "wrong password" });
+    }
+  } else {
+    res.json({ success: false, errors: "Email does not Exist" });
+  }
+});
+
 app.listen(5000, () => {
   console.log(`Server running on port 5000`);
 });

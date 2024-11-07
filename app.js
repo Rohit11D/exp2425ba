@@ -7,6 +7,9 @@ const dotenv = require("dotenv");
 const path = require("path");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
+const Disaster = require("./models/Disaster.js");
+const analyticsController = require("./controllers/analytics.js");
+
 dotenv.config();
 
 app.use(express.json());
@@ -90,6 +93,58 @@ app.post("/login", async (req, res) => {
     res.json({ success: false, errors: "Email does not Exist" });
   }
 });
+
+app.get("/disastersData", async (req, res) => {
+  try {
+    const disasters = await Disaster.find();
+    res.json(disasters);
+  } catch (error) {
+    res.status(500).json({ error: "Error fetching disasters" });
+  }
+});
+// Add disaster endpoint
+app.post("/addDisaster", async (req, res) => {
+  const { type, location, severity, magnitude, waterLevel, timestamp } =
+    req.body;
+
+  // Validate required fields
+  if (
+    !type ||
+    !location ||
+    !location.coordinates ||
+    location.coordinates.length !== 2
+  ) {
+    return res.status(400).json({
+      message: "Type and valid location with coordinates are required.",
+    });
+  }
+
+  // Create and save disaster
+  const disaster = new Disaster({
+    type,
+    location,
+    severity,
+    magnitude,
+    waterLevel,
+    timestamp,
+  });
+
+  try {
+    await disaster.save();
+    res.status(201).json({
+      success: true,
+      message: "Disaster added successfully",
+      disaster,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "An error occurred while adding the disaster",
+    });
+  }
+});
+
+app.get("/analytics", analyticsController.getAnalyticsData);
 
 app.listen(5000, () => {
   console.log(`Server running on port 5000`);

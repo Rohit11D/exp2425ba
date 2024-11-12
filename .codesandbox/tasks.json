@@ -2,8 +2,8 @@
   // These tasks will run in order when initializing your CodeSandbox project.
   "setupTasks": [
     {
-      "command": "npm install",
-      "name": "Install Dependencies"
+      "name": "Install Dependencies",
+      "command": "npm install"
     }
   ],
 
@@ -16,7 +16,10 @@
     "dev": {
       "name": "dev",
       "command": "npm run dev",
-      "runAtStart": true
+      "runAtStart": true,
+      "preview": {
+        "port": 5000
+      }
     },
     "test": {
       "name": "test",

@@ -8,6 +8,7 @@ const path = require("path");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const Disaster = require("./models/Disaster.js");
+const Resource = require("./models/Resource");
 const analyticsController = require("./controllers/analytics.js");
 
 dotenv.config();
@@ -145,6 +146,73 @@ app.post("/addDisaster", async (req, res) => {
 });
 
 app.get("/analytics", analyticsController.getAnalyticsData);
+
+// Route to get all resources
+app.get("/resources", async (req, res) => {
+  try {
+    const resources = await Resource.find();
+    res.json(resources);
+  } catch (error) {
+    res.status(500).json({ error: "Error fetching resources" });
+  }
+});
+
+// Route to add a new resource
+app.post("/addResources", async (req, res) => {
+  const { name, type, lat, lng, available, capacity } = req.body;
+
+  if (!name || !type || !lat || !lng || !available || !capacity) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
+
+  try {
+    const resource = new Resource({
+      name,
+      type,
+      lat,
+      lng,
+      available,
+      capacity,
+    });
+    await resource.save();
+    res.status(201).json({
+      success: true,
+      message: "Resource added successfully",
+      resource,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "An error occurred while adding the resource",
+    });
+  }
+});
+
+// Route to update resource availability
+app.put("/resources/:id/availability", async (req, res) => {
+  const { id } = req.params;
+  const { count } = req.body;
+
+  try {
+    const resource = await Resource.findById(id);
+    if (!resource || resource.available < count) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Insufficient resources" });
+    }
+    resource.available -= count;
+    await resource.save();
+    res.json({
+      success: true,
+      message: "Resource availability updated",
+      resource,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ success: false, error: "Error updating resource availability" });
+  }
+});
 
 app.listen(5000, () => {
   console.log(`Server running on port 5000`);

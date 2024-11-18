@@ -10,7 +10,7 @@ const jwt = require("jsonwebtoken");
 const Disaster = require("./models/Disaster.js");
 const Resource = require("./models/Resource");
 const analyticsController = require("./controllers/analytics.js");
-
+const Volunteer = require("./models/Volunteer");
 dotenv.config();
 
 app.use(express.json());
@@ -20,7 +20,7 @@ app.use(express.json());
 // });
 app.use(
   cors({
-    origin: "https://r54jf6-3000.csb.app", // Adjust this to match your frontend URL
+    origin: "http://localhost:3000", // Adjust this to match your frontend URL
   })
 );
 
@@ -211,6 +211,62 @@ app.put("/resources/:id/availability", async (req, res) => {
     res
       .status(500)
       .json({ success: false, error: "Error updating resource availability" });
+  }
+});
+
+
+// POST route to add a new volunteer
+app.post("/registerAsVolunteer", async (req, res) => {
+  try {
+    const { name, email, phone, skills } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !phone) {
+      return res.status(400).json({ error: "Name, email, and phone are required" });
+    }
+
+    // Create a new volunteer
+    const newVolunteer = new Volunteer({ name, email, phone, skills });
+    await newVolunteer.save();
+
+    res.status(201).json({ message: "Thank you for joining us!", volunteer: newVolunteer });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "An error occurred. Please try again later." });
+  }
+});
+// Volunteer Login Route
+app.post("/loginAsVolunteer", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    // Validate input
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    // Check if volunteer exists
+    const volunteer = await Volunteer.findOne({ email });
+    if (!volunteer) {
+      return res.status(404).json({ error: "Volunteer not found" });
+    }
+
+    // Send success response
+    res.status(200).json({ message: "Login successful", volunteer });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "An error occurred. Please try again later." });
+  }
+});
+
+// GET route to fetch all volunteers (optional, for admin purposes)
+app.get("/volunteers", async (req, res) => {
+  try {
+    const volunteers = await Volunteer.find();
+    res.status(200).json(volunteers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "An error occurred. Please try again later." });
   }
 });
 

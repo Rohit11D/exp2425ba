@@ -28,8 +28,8 @@ app.use(
 );
 
 const razorpayInstance = new Razorpay({
-  key_id: 'rz',
-  key_secret: 'SK'
+  key_id: process.env.MY_KEY,
+  key_secret: process.env.MY_SECRET
 });
 connectDB();
 

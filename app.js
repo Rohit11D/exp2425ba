@@ -281,7 +281,7 @@ app.get("/volunteers", async (req, res) => {
 // Route for creating a donation entry
 app.post('/donate', async (req, res) => {
   const { donorInfo, amount } = req.body;
-
+console.log(process.env.MY_KEY,process.env.REACT_APP_MY_KEY);
   try {
       const newDonation = new Donation({
           donorInfo,

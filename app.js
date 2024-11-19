@@ -27,10 +27,7 @@ app.use(
   })
 );
 
-const razorpayInstance = new Razorpay({
-  key_id: 'rzp_test_zOdvZ5lRWNr1Ep',
-  key_secret: 'SKVDFh3p7sjl31Pdpg9pGSA6'
-});
+
 connectDB();
 
 // Serve frontend (for production)

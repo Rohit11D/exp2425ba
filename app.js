@@ -11,6 +11,9 @@ const Disaster = require("./models/Disaster.js");
 const Resource = require("./models/Resource");
 const analyticsController = require("./controllers/analytics.js");
 const Volunteer = require("./models/Volunteer");
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
+const Donation = require('./models/Donation');
 dotenv.config();
 
 app.use(express.json());
@@ -24,6 +27,10 @@ app.use(
   })
 );
 
+const razorpayInstance = new Razorpay({
+  key_id: 'rzp_test_zOdvZ5lRWNr1Ep',
+  key_secret: 'SKVDFh3p7sjl31Pdpg9pGSA6'
+});
 connectDB();
 
 // Serve frontend (for production)
@@ -42,10 +49,10 @@ if (process.env.NODE_ENV === "production") {
 //  Creating end point for registering the user
 app.post("/register", async (req, res) => {
   console.log("Rohit");
-  const { name, email, password, role } = req.body;
-
+  const { name, email, password} = req.body;
+console.log("have all");
   // Check for missing fields
-  if (!name || !email || !password || !role) {
+  if (!name || !email || !password ) {
     return res.status(400).json({
       message: "All fields are required: name, email, password, and role",
     });
@@ -61,7 +68,7 @@ app.post("/register", async (req, res) => {
     name: req.body.name,
     email: req.body.email,
     password: req.body.password,
-    role: req.body.role,
+    // role: req.body.role,
   });
   await user.save();
 
@@ -269,6 +276,74 @@ app.get("/volunteers", async (req, res) => {
     res.status(500).json({ error: "An error occurred. Please try again later." });
   }
 });
+
+
+// Route for creating a donation entry
+app.post('/donate', async (req, res) => {
+  const { donorInfo, amount } = req.body;
+
+  try {
+      const newDonation = new Donation({
+          donorInfo,
+          amount,
+          paymentStatus: 'pending'
+      });
+      const savedDonation = await newDonation.save();
+      res.status(201).json({ success: true, donationId: savedDonation._id });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: 'Error creating donation' });
+  }
+});
+
+// Route for creating a Razorpay order
+app.post('/checkout', async (req, res) => {
+  const { amount } = req.body;
+
+  try {
+      const options = {
+          amount: amount * 100,  // amount in paise
+          currency: 'INR',
+          receipt: `receipt_${Date.now()}`
+      };
+
+      const order = await razorpayInstance.orders.create(options);
+      if (!order) return res.status(500).json({ success: false, message: "Error creating Razorpay order" });
+
+      res.status(201).json({ success: true, razorpayorder: order });
+  } catch (error) {
+      console.error(error);
+      res.status(500).json({ success: false, message: 'Error initiating Razorpay payment' });
+  }
+});
+
+// Route for verifying the Razorpay payment
+app.post('/verify-donation-payment', async (req, res) => {
+  const { razorpayOrderId, razorpayPaymentId, razorpaySignature, donationId } = req.body;
+
+  try {
+      const generatedSignature = crypto
+          .createHmac('sha256','SKVDFh3p7sjl31Pdpg9pGSA6')
+          .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+          .digest('hex');
+
+      if (generatedSignature === razorpaySignature) {
+          await Donation.findByIdAndUpdate(donationId, {
+              paymentStatus: 'completed',
+              razorpayOrderId,
+              razorpayPaymentId,
+              razorpaySignature
+          });
+          res.status(200).json({ success: true, message: "Payment verified successfully" });
+      } else {
+          res.status(400).json({ success: false, message: "Invalid signature" });
+      }
+  } catch (error) {
+      console.error("Error verifying payment:", error);
+      res.status(500).json({ success: false, message: 'Error verifying payment' });
+  }
+});
+
 
 app.listen(5000, () => {
   console.log(`Server running on port 5000`);

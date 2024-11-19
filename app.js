@@ -27,7 +27,10 @@ app.use(
   })
 );
 
-
+const razorpayInstance = new Razorpay({
+  key_id: 'rz',
+  key_secret: 'SK'
+});
 connectDB();
 
 // Serve frontend (for production)
@@ -317,13 +320,13 @@ app.post('/checkout', async (req, res) => {
 // Route for verifying the Razorpay payment
 app.post('/verify-donation-payment', async (req, res) => {
   const { razorpayOrderId, razorpayPaymentId, razorpaySignature, donationId } = req.body;
-
+ console.log("r signature",razorpaySignature);
   try {
       const generatedSignature = crypto
           .createHmac('sha256','SKVDFh3p7sjl31Pdpg9pGSA6')
           .update(`${razorpayOrderId}|${razorpayPaymentId}`)
           .digest('hex');
-
+          console.log("g signature",generatedSignature);
       if (generatedSignature === razorpaySignature) {
           await Donation.findByIdAndUpdate(donationId, {
               paymentStatus: 'completed',

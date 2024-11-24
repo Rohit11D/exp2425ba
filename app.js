@@ -3,6 +3,7 @@ const app = express();
 // const PORT = process.env.PORT || 3000;
 const connectDB = require("./config/db.js");
 const userSchema = require("./models/User.js");
+const eventSchema = require("./models/Event.js");
 const dotenv = require("dotenv");
 const path = require("path");
 const cors = require("cors");
@@ -14,6 +15,9 @@ const Volunteer = require("./models/Volunteer");
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const Donation = require('./models/Donation');
+const multer = require('multer');
+const {protect} = require('./middleware/auth.js');
+const Event = require("./models/Event.js");
 dotenv.config();
 
 app.use(express.json());
@@ -26,6 +30,67 @@ app.use(
     origin: "http://localhost:3000", // Adjust this to match your frontend URL
   })
 );
+
+// upload image section
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+      cb(null, 'uploads/'); // Directory where files will be stored
+  },
+  filename: function (req, file, cb) {
+      cb(null, Date.now() + path.extname(file.originalname)); // Add timestamp to avoid filename conflicts
+  }
+});
+const upload = multer({ storage: storage });
+
+// Static folder for resume uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
+//  get Events
+app.get("/events", async (req, res) => {
+  try {
+    const events = await Event.find();
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ error: "Error fetching events" });
+  }
+});
+// Upload Events
+app.post('/reportEvent',protect, upload.single('image'), async (req, res) => {
+  try {
+      console.log('req.user:', req.user); // Debug log
+      console.log('req.file:', req.file); // Debug file
+        console.log('req.body:', req.body); // Debug form data
+
+      if (!req.user) {
+          return res.status(401).json({ message: 'User not authenticated' });
+      }
+  // Construct GeoJSON location
+  const parsedLocation = JSON.parse(req.body.location);
+  console.log("user latitude",req.body.location.lat);
+  const geoLocation = {
+    type: 'Point',
+    coordinates: [parsedLocation.lon, parsedLocation.lat], // Note: [longitude, latitude]
+};
+      const event = new eventSchema({
+          authorId: req.user.id,
+          title:req.body.title,
+          image: req.file?req.file.path:null,
+          eventType:req.body.eventType,
+          scale:req.body.scale,
+          location:geoLocation
+      });
+
+      await event.save();
+      res.status(500).json({ message: 'event uploaded successfully' });
+  } catch (error) {
+      console.error(error);
+      res.status(400).json({ message: error.message });
+  }
+});
+
+
 
 const razorpayInstance = new Razorpay({
   key_id: process.env.MY_KEY,
